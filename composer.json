@@ -10,5 +10,6 @@
         "psr-0": {
             "LikePDO": "src/"
         }
-    }
+    },
+    "minimum-stability": "dev"
 }
