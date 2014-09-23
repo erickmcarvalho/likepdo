@@ -1,0 +1,14 @@
+{
+    "name": "erickmcarvalho/likepdo",
+    "description": "Similar database library to PDO",
+    "license": "MIT",
+    "require": {
+        "php": ">=5.3.0",
+        "erickmcarvalho/likepdo": "dev-master"
+    },
+    "autoload": {
+        "psr-0": {
+            "LikePDO": "src/"
+        }
+    }
+}
