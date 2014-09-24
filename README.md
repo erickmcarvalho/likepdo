@@ -5,7 +5,6 @@ Similar database library to PDO
 The LikePDO library is an alternative for those who need to use a database library similar to PDO without the need for native extension. 
 Is fully developed in PHP, using standard features such as MSSQL library and the like, without use the native PDO.
 
-=======
 ## Features
 
 - Well organized and structured files.
@@ -13,7 +12,6 @@ Is fully developed in PHP, using standard features such as MSSQL library and the
 - Use the PDO::* constants.
 - Defines the constant PDO::* if the PDO extension is not installed.
 
-=======
 ## Installing
 
 Here's a very simple way to install:
@@ -37,7 +35,6 @@ Here's a very simple way to install:
 
 All documentation can be based on the [PHP manual](http://php.net/manual/en/class.pdo.php) on the PDO.
 
-=======
 ## Available Drivers
 
 LikePDO currently supports the following drivers:
