@@ -8,6 +8,8 @@
 
 namespace LikePDO\Instances;
 
+use stdClass;
+
 class LikePDORow extends stdClass
 {
 	/**

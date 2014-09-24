@@ -8,6 +8,8 @@
 
 namespace LikePDO;
 
+use Exception;
+
 class LikePDOException extends Exception
 {
 	/**
@@ -15,8 +17,8 @@ class LikePDOException extends Exception
 	 * 
 	 * @return	string
 	*/
-	public function getMessage()
+	/*public final function getMessage()
 	{
-		return "[LikePDO] ".$this->getMessage();
-	}
+		return "[LikePDO] ".parrent::getMessage();
+	}*/
 }

@@ -9,9 +9,9 @@
 
 namespace LikePDO;
 
-use LikePDO\Drivers;
-use LikePDO\Interfaces;
-use LikePDO\Instances;
+use LikePDO\Drivers\MssqlDriver;
+use LikePDO\Interfaces\LikePDOInterface;
+use LikePDO\Instances\LikePDOStatement;
 
 class LikePDO implements LikePDOInterface
 {
@@ -26,10 +26,10 @@ class LikePDO implements LikePDOInterface
 	/**
 	 * Driver Class Statement
 	 * 
-	 * @access	private
+	 * @access	public
 	 * @var		object
 	*/
-	private $driver					= NULL;
+	public $driver					= NULL;
 	
 	/**
 	 * DSN Settings
@@ -42,10 +42,10 @@ class LikePDO implements LikePDOInterface
 	/**
 	 * Options
 	 * 
-	 * @access	private
+	 * @access	public
 	 * @var		array
 	*/
-	private $options				= array
+	public $options					= array
 	(
 		self::ATTR_CASE => self::CASE_NATURAL,
 		self::ATTR_DEFAULT_FETCH_MODE => self::FETCH_BOTH
@@ -78,6 +78,9 @@ class LikePDO implements LikePDOInterface
 	*/
 	public function __construct($dsn, $username = NULL, $password = NULL, array $options = array())
 	{
+		if(!isset($dsn))
+			return false;
+
 		if(substr($dsn, 0, 4) == "uri:")
 		{
 			if(function_exists("curl_init"))
@@ -121,9 +124,8 @@ class LikePDO implements LikePDOInterface
 		$_dsn = array();
 		
 		$this->dsn['driver'] = $driver;
-		array_shift($explode);
 		
-		if(count($dns) < 1)
+		if(count($dsn) < 1)
 		{
 			throw new LikePDOException("DSN parameter invalid");
 		}
@@ -133,7 +135,7 @@ class LikePDO implements LikePDOInterface
 			{
 				if(strstr($row, "="))
 				{
-					list($key, $value) = explode("=");
+					list($key, $value) = explode("=", $row);
 					
 					$this->dsn[$key] = $value;
 				}
@@ -317,7 +319,7 @@ class LikePDO implements LikePDOInterface
 	 * @param	array	$driver_options - This array holds one or more key=>value pairs to set attribute values for the PDOStatement object that this method returns.
 	 * @return	object	instanceof LikePDOStatement
 	*/
-	public function prepare($statement, $driver_options = array())
+	public function prepare($statement, array $driver_options = array())
 	{
 		return new LikePDOStatement($statement, $this);
 	}

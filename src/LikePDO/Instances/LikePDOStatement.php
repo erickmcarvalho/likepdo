@@ -8,9 +8,11 @@
 
 namespace LikePDO\Instances;
 
-use LikePDO;
-use LikePDOException;
-use LikePDORow;
+use LikePDO\LikePDO;
+use LikePDO\LikePDOException;
+use LikePDO\Instances\LikePDORow;
+use ReflectionClass;
+use stdClass;
 
 class LikePDOStatement
 {
@@ -191,7 +193,7 @@ class LikePDOStatement
 	public function __construct($statement, LikePDO $pdo)
 	{
 		$this->queryString = $statement;
-		$this->pdo = $pdo instanceof LikePDO;
+		$this->pdo = $pdo;
 	}
 	
 	/**
@@ -213,7 +215,7 @@ class LikePDOStatement
 		}
 		else
 		{
-			$this->columnsBound[$column] &= array
+			$this->columnsBound[$column] = array
 			(
 				"param" => &$param,
 				"type" => $type,
@@ -243,7 +245,7 @@ class LikePDOStatement
 		}
 		else
 		{
-			$this->parametersBound[$parameter] &= array
+			$this->parametersBound[$parameter] = array
 			(
 				"variable" => &$variable,
 				"data_type" => $data_type,
@@ -274,7 +276,7 @@ class LikePDOStatement
 			$this->parameters[$parameter] = array
 			(
 				"data_type" => $data_type,
-				"value" => $this->pdo->quote($value, $data_type)
+				"value" => $value
 			);
 			
 			return true;
@@ -435,7 +437,7 @@ class LikePDOStatement
 					{
 						$position = strpos($queryString, "?");
 						
-						if(!strstr($position, "?"))
+						if(!strstr($queryString, "?"))
 						{
 							throw new LikePDOException("Statement: Too few parameters");
 							return false;
@@ -461,7 +463,7 @@ class LikePDOStatement
 				{
 					$position = strpos($queryString, "?");
 					
-					if(!strstr($position, "?"))
+					if(!strstr($queryString, "?"))
 					{
 						throw new LikePDOException("Statement: Too few parameters");
 						return false;
@@ -486,7 +488,7 @@ class LikePDOStatement
 				{
 					$position = strpos($queryString, "?");
 					
-					if(!strstr($position, "?"))
+					if(!strstr($queryString, "?"))
 					{
 						throw new LikePDOException("Statement: Too few parameters");
 						return false;
@@ -501,9 +503,10 @@ class LikePDOStatement
 			}
 		}
 		
-		$this->resource = $this->pdo->driver->query($this->queryString);
+		$this->resource = $this->pdo->driver->query($queryString);
 		$this->executed = true;
 		$this->rowsAffected = $this->pdo->driver->getRowsAffected();
+		$this->columnCount = $this->pdo->driver->getNumFields($this->resource);
 		
 		if(!$this->resource)
 		{
@@ -549,15 +552,18 @@ class LikePDOStatement
 		}
 		
 		if(!$fetch_style)
-			$fetch_style = $this->pdo->driver->options[LikePDO::ATTR_DEFAULT_FETCH_MODE];
-			
+			$fetch_style = $this->pdo->options[LikePDO::ATTR_DEFAULT_FETCH_MODE];
+
+		$columns = array();
+		$fetch = NULL;
+		
 		switch($fetch_style)
 		{
 			case LikePDO::FETCH_ASSOC :
 				$fetch = $this->pdo->driver->fetch($this->resource, LikePDO::FETCH_ASSOC);
 				$result = array();
 				
-				if(count($fetch) > 0)
+				if(count($fetch) > 0 && $fetch)
 				{
 					foreach($fetch as $key => $value)
 					{
@@ -575,7 +581,7 @@ class LikePDOStatement
 				$result = array();
 				$i = 0;
 				
-				if(count($fetch) > 0)
+				if(count($fetch) > 0 && $fetch)
 				{
 					foreach($fetch as $key => $value)
 					{
@@ -595,17 +601,18 @@ class LikePDOStatement
 			break;
 			case LikePDO::FETCH_BOUND :
 				$fetch = $this->pdo->driver->fetch($this->resource, LikePDO::FETCH_ASSOC);
+				$i = 0;
 				
-				if(count($fetch) > 0)
+				if(count($fetch) > 0 && $fetch)
 				{
 					foreach($fetch as $key => $value)
 					{
 						$key = $this->realColumnAttribute($key);
 								
 						if(isset($this->columnsBound[$key]))
-							$this->columnsBound[$key]['variable'] = $value;
+							$this->columnsBound[$key]['param'] = $value;
 						elseif(isset($this->columnsBound[$i]))
-							$this->columnsBound[$i]['variable'] = $value;
+							$this->columnsBound[$i]['param'] = $value;
 						
 						if(is_string($key))
 							$columns[] = $key;
@@ -639,7 +646,7 @@ class LikePDOStatement
 					$instance = new ReflectionClass($this->fetchModeDefinition);
 					$instance = $instance->newInstanceArgs($this->fetchModeArguments);
 					
-					if(count($fetch) > 0)
+					if(count($fetch) > 0 && $fetch)
 					{
 						foreach($fetch as $key => $value)
 						{
@@ -673,7 +680,7 @@ class LikePDOStatement
 				}
 				else
 				{
-					if(count($fetch) > 0)
+					if(count($fetch) > 0 && $fetch)
 					{
 						foreach($fetch as $key => $value)
 						{
@@ -685,7 +692,7 @@ class LikePDOStatement
 					}
 				}
 				
-				$fetch = $fetchModeDefinition;
+				$fetch = $this->fetchModeDefinition;
 			break;
 			case LikePDO::FETCH_LAZY :
 				$fetch = $this->pdo->driver->fetch($this->resource, LikePDO::FETCH_ASSOC);
@@ -693,7 +700,7 @@ class LikePDOStatement
 				$LikePDORow = new LikePDORow();
 				$LikePDORow->queryString = $this->queryString;
 				
-				if(count($fetch) > 0)
+				if(count($fetch) > 0 && $fetch)
 				{
 					foreach($fetch as $key => $value)
 					{
@@ -707,35 +714,36 @@ class LikePDOStatement
 				$fetch = $LikePDORow;
 			break;
 			case LikePDO::FETCH_NAMED :
-				$fetch = $this->pdo->driver->fetch($this->resource, LikePDO::FETCH_ASSOC);
+				$fetch = $this->pdo->driver->fetch($this->resource, LikePDO::FETCH_NUM);
 				$result = array();
-				
-				if(count($fetch) > 0)
+
+				if(count($fetch) > 0 && $fetch)
 				{
 					foreach($fetch as $key => $value)
 					{
-						$key = $this->realColumnAttribute($key);
+						$field = $this->pdo->driver->fetchField($this->resource, $key);
+						$field = $this->realColumnAttribute($field->name);
 						
-						if(isset($result[$key]))
+						if(in_array($field, $columns))
 						{
-							if(!is_array($result[$key]))
+							if(is_array($result[$field]))
 							{
-								$tmp = $result[$key];
-								$result[$key] = array($tmp);
-								
-								unset($tmp);
+								$result[$field][] = $value;
 							}
 							else
 							{
-								$result[$key][] = $value;
+								$tmp = $result[$field];
+								$result[$field] = array($tmp, $value);
+
+								unset($tmp);
 							}
 						}
 						else
 						{
-							$result[$key] = $value;
+							$result[$field] = $value;
 						}
 						
-						$columns[] = $key;
+						$columns[] = $field;
 					}
 				}
 				
@@ -744,19 +752,22 @@ class LikePDOStatement
 			case LikePDO::FETCH_NUM :
 				$fetch = $this->pdo->driver->fetch($this->resource, LikePDO::FETCH_NUM);
 				
-				foreach($fetch as $key => $value)
+				if(count($fetch) > 0 && $fetch)
 				{
-					$field = $this->pdo->driver->fetchField($this->resource);
-					$key = $this->realColumnAttribute($key);
-					
-					$columns[] = $field->name;
+					foreach($fetch as $key => $value)
+					{
+						$field = $this->pdo->driver->fetchField($this->resource);
+						$key = $this->realColumnAttribute($key);
+						
+						$columns[] = $field->name;
+					}
 				}
 			break;
 			case LikePDO::FETCH_OBJ :
 				$fetch = $this->pdo->driver->fetch($this->resource, LikePDO::FETCH_OBJ);
 				$result = new stdClass();
 				
-				if(count($fetch) > 0)
+				if(count($fetch) > 0 && $fetch)
 				{
 					foreach($fetch as $key => $value)
 					{
@@ -777,7 +788,6 @@ class LikePDOStatement
 		
 		$this->fetch = $fetch;
 		$this->columns = $columns;
-		$this->columnCount = count($columns);
 		$this->fetchResultMode = $fetch_style;
 		$this->isFetchAll = false;
 		
@@ -814,7 +824,9 @@ class LikePDOStatement
 		}
 		
 		if(!$fetch_style)
-			$fetch_style = $this->pdo->driver->options[LikePDO::ATTR_DEFAULT_FETCH_MODE];
+			$fetch_style = $this->pdo->options[LikePDO::ATTR_DEFAULT_FETCH_MODE];
+
+		$columns = array();
 			
 		switch($fetch_style)
 		{
@@ -871,9 +883,9 @@ class LikePDOStatement
 						$key = $this->realColumnAttribute($key);
 								
 						if(isset($this->columnsBound[$key]))
-							$this->columnsBound[$key]['variable'] = $value;
+							$this->columnsBound[$key]['param'] = $value;
 						elseif(isset($this->columnsBound[$i]))
-							$this->columnsBound[$i]['variable'] = $value;
+							$this->columnsBound[$i]['param'] = $value;
 						
 						$i++;
 					}
@@ -949,7 +961,7 @@ class LikePDOStatement
 					}
 				}
 				
-				$fetch = $fetchModeDefinition;
+				$fetch = $this->fetchModeDefinition;
 			break;
 			case LikePDO::FETCH_LAZY :
 				throw new LikePDOException("PDO::FETCH_LAZY can't be used with LikePDOStatement::fetchAll()");
@@ -959,29 +971,30 @@ class LikePDOStatement
 				$result = array();
 				$i = 0;
 				
-				while($fetch = $this->pdo->driver->fetch($this->resource, LikePDO::FETCH_ASSOC))
+				while($fetch = $this->pdo->driver->fetch($this->resource, LikePDO::FETCH_NUM))
 				{
 					foreach($fetch as $key => $value)
 					{
-						$key = $this->realColumnAttribute($key);
+						$field = $this->pdo->driver->fetchField($this->resource, $key);
+						$field = $this->realColumnAttribute($field->name);
 							
-						if(isset($result[$i][$key]))
+						if(isset($result[$i][$field]))
 						{
-							if(!is_array($result[$i][$key]))
+							if(is_array($result[$i][$field]))
 							{
-								$tmp = $result[$i][$key];
-								$result[$i][$key] = array($tmp);
-								
-								unset($tmp);
+								$result[$i][$field][] = $value;
 							}
 							else
 							{
-								$result[$i][$result][] = $value;
+								$tmp = $result[$i][$field];
+								$result[$i][$field] = array($tmp, $value);
+
+								unset($tmp);
 							}
 						}
 						else
 						{
-							$result[$i][$key] = $value;
+							$result[$i][$field] = $value;
 						}
 					}
 					
@@ -1091,7 +1104,7 @@ class LikePDOStatement
 							if(isset($this->fetch->{$this->columns[$column_number]}))
 								return $this->fetch->{$this->columns[$column_number]};
 						break;
-						case LikePDO::FETCH_INFO :
+						case LikePDO::FETCH_INTO :
 							if(isset($this->fetch->{$this->columns[$column_number]}))
 								return $this->fetch->{$this->columns[$column_number]};
 						break;
@@ -1326,7 +1339,7 @@ class LikePDOStatement
 				$this->fetchModeDefinition = $fetch_arga;
 			break;				
 			break;
-			case LikePDO::FETCH_INFO :
+			case LikePDO::FETCH_INTO :
 				if(!is_object($fetch_arga))
 				{
 					throw new LikePDOException("No fetch class specified");

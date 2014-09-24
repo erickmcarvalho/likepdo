@@ -8,6 +8,8 @@
 
 namespace LikePDO\Drivers;
 
+use LikePDO\LikePDO;
+use LikePDO\LikePDOException;
 use LikePDO\Interfaces\DriverInterface;
 
 class MssqlDriver implements DriverInterface
@@ -59,6 +61,9 @@ class MssqlDriver implements DriverInterface
 		if(isset($dsn['port']))
 			if($dsn['port'])
 				$dsn['host'] = (substr(strtoupper(PHP_OS), 0, 3) == "WIN" ? "," : ":").$dsn['port'];
+
+		if(isset($dsn['charset']))
+			ini_set("mssql.charset", $dsn['charset']);
 		
 		if($this->options[LikePDO::ATTR_PERSISTENT] == true)
 			$this->mssql = mssql_pconnect($dsn['host'], $username, $password);
@@ -114,7 +119,7 @@ class MssqlDriver implements DriverInterface
 		}
 		else
 		{
-			switch($statement)
+			switch($fetch_style)
 			{
 				case LikePDO::FETCH_ASSOC :
 					return mssql_fetch_assoc($statement);
@@ -136,7 +141,7 @@ class MssqlDriver implements DriverInterface
 	 * @param	integer		$field_offset - The numerical field offset. If the field offset is not specified, the next field that was not yet retrieved by this function is retrieved. The field_offset starts at 0.
 	 * @return	object
 	*/
-	public function fetchField($sstatement, $field_offset = -1)
+	public function fetchField($statement, $field_offset = -1)
 	{
 		if(!is_resource($statement))
 		{
@@ -223,6 +228,25 @@ class MssqlDriver implements DriverInterface
 	{
 		return mssql_rows_affected($this->mssql);
 	}
+
+	/**
+	 * Gets the number of fields in result
+	 * 
+	 * @param	resource	$statement - The result resource that is being evaluated.
+	 * @return	integer
+	*/
+	public function getNumFields($statement)
+	{
+		if(!is_resource($statement))
+		{
+			throw new LikePDOException("There is no active statement");
+			return false;
+		}
+		else
+		{
+			return mssql_num_fields($statement);
+		}
+	}
 	
 	/**
 	 * Quotes a string for use in a query.
@@ -245,7 +269,7 @@ class MssqlDriver implements DriverInterface
 				return intval($string);
 			break;
 			case LikePDO::PARAM_STR : default :
-				return "'".$this->escapeCharacters($string)."'";
+				return "'".$this->escapeString($string)."'";
 			break;
 		}
 	}
@@ -278,5 +302,16 @@ class MssqlDriver implements DriverInterface
 	public function getLastMessage()
 	{
 		return mssql_get_last_message();
+	}
+
+	/**
+	 * Escapes special characters in a string for use in an SQL statement
+	 * 
+	 * @param	string	$string - The string to be escaped.
+	 * @return	string
+	*/
+	public function escapeString($string)
+	{
+		return str_replace("'", "''", $string);
 	}
 }

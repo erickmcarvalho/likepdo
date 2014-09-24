@@ -15,6 +15,9 @@
     "autoload": {
         "psr-0": {
             "LikePDO": "src/"
-        }
+        },
+        "files": [
+            "src/LikePDO/Includes/PDO.php"
+        ]
     }
 }
