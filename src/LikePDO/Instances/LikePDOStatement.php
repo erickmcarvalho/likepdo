@@ -801,9 +801,11 @@ class LikePDOStatement
 	 * @param	integer	$fetch_style - Controls the contents of the returned array as documented in LikePDOStatement::fetch().
 	 * @param	integer	$cursor_orientation - For a LikePDOStatement object representing a scrollable cursor, this value determines which row will be returned to the caller.
 	 * @param	integer	$cursor_offset - For a LikePDOStatement object representing a scrollable cursor for which the cursor_orientation parameter is set to PDO::FETCH_ORI_ABS, this value specifies the absolute number of the row in the result set that shall be fetched.
+	 * @param	mixed	$final_arga
+	 * @param	mixed	$final_argb
 	 * @return	mixed
 	*/
-	public function fetchAll($fetch_style = NULL, $cursor_orientation = LikePDO::FETCH_ORI_NEXT, $cursor_offset = 0)
+	public function fetchAll($fetch_style = NULL, $cursor_orientation = LikePDO::FETCH_ORI_NEXT, $cursor_offset = 0, $final_arga = NULL, $final_argb = NULL)
 	{
 		if($this->executed == true)
 		{
@@ -894,17 +896,50 @@ class LikePDOStatement
 				$fetch = true;
 			break;
 			case LikePDO::FETCH_CLASS :
-				if($this->fetchMode != LikePDO::FETCH_CLASS)
+				$fetch = false;
+				
+				if(is_string($cursor_orientation))
 				{
-					throw new LikePDOException("No fetch class specified");
-					return false;
+					$class = $cursor_orientation;
+					$arguments = array();
+				
+					if(is_array($cursor_offset))
+					{
+						$arguments = $cursor_offset;
+						$cursor_orientation = $final_arga;
+						$cursor_offset = $final_argb;
+					}
+					else
+					{
+						$cursor_orientation = $cursor_offset;
+						$cursor_offset = $final_arg;
+					}
 				}
-				elseif(!$this->fetchModeDefinition)
+				else
 				{
-					throw new LikePDOException("No fetch class specified");
-					return false;
+					if($this->fetchMode != LikePDO::FETCH_CLASS)
+					{
+						throw new LikePDOException("No fetch class specified");
+						return false;
+					}
+					elseif(!$this->fetchModeDefinition)
+					{
+						throw new LikePDOException("No fetch class specified");
+						return false;
+					}
+					elseif(!class_exists($this->fetchModeDefinition))
+					{
+						throw new LikePDOException("No fetch class specified");
+						return false;
+					}
+					else
+					{
+						$class = $this->fetchModeDefinition;
+						$arguments = $this->fetchModeArguments;
+					}
 				}
-				elseif(!class_exists($this->fetchModeDefinition))
+				
+				if(!class_exists($class))
 				{
 					throw new LikePDOException("No fetch class specified");
 					return false;
@@ -916,8 +951,8 @@ class LikePDOStatement
 					
 					while($fetch = $this->pdo->driver->fetch($this->resource, LikePDO::FETCH_OBJ))
 					{
-						$instance = new ReflectionClass($this->fetchModeDefinition);
-						$result[$i] = $instance->newInstanceArgs($this->fetchModeArguments);
+						$instance = new ReflectionClass($class);
+						$result[$i] = $instance->newInstanceArgs($arguments);
 						
 						foreach($fetch as $key => $value)
 						{
@@ -932,7 +967,7 @@ class LikePDOStatement
 				}
 			break;
 			case LikePDO::FETCH_INTO :
-				$fetch = $this->pdo->driver->fetch($this->resource, LikePDO::FETCH_OBJ);
+				$fetch = false;
 				
 				if($this->fetchMode != LikePDO::FETCH_INTO)
 				{
@@ -951,17 +986,22 @@ class LikePDOStatement
 				}
 				else
 				{
-					if(count($fetch) > 0)
+					$result = array();
+					$i = 0;
+					
+					while($fetch = $this->pdo->driver->fetch($this->resource, LikePDO::FETCH_OBJ))
 					{
 						foreach($fetch as $key => $value)
 						{
 							$key = $this->realColumnAttribute($key);
 							$this->fetchModeDefinition->{$key} = $value;
 						}
+						
+						$result[$i++] = $this->fetchModeDefinition;
 					}
+					
+					$fetch = $result;
 				}
-				
-				$fetch = $this->fetchModeDefinition;
 			break;
 			case LikePDO::FETCH_LAZY :
 				throw new LikePDOException("PDO::FETCH_LAZY can't be used with LikePDOStatement::fetchAll()");
