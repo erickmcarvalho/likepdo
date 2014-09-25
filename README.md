@@ -16,7 +16,7 @@ Is fully developed in PHP, using standard features such as MSSQL library and the
 
 Here's a very simple way to install:
 
-1. Use [Composer](http://getcomposer.org) to install Whoops into your project:
+1. Use [Composer](http://getcomposer.org) to install LikePDO into your project:
 
     ```bash
     composer require erickmcarvalho/likepdo:0.1.0
