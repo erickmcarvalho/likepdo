@@ -917,25 +917,23 @@ class LikePDOStatement
 				}
 				else
 				{
-					if($this->fetchMode != LikePDO::FETCH_CLASS)
+					if($this->fetchModeDefinition)
 					{
-						throw new LikePDOException("No fetch class specified");
-						return false;
-					}
-					elseif(!$this->fetchModeDefinition)
-					{
-						throw new LikePDOException("No fetch class specified");
-						return false;
-					}
-					elseif(!class_exists($this->fetchModeDefinition))
-					{
-						throw new LikePDOException("No fetch class specified");
-						return false;
+						if(!class_exists($this->fetchModeDefinition))
+						{
+							throw new LikePDOException("No fetch class specified");
+							return false;
+						}
+						else
+						{
+							$class = $this->fetchModeDefinition;
+							$arguments = $this->fetchModeArguments;
+						}
 					}
 					else
 					{
-						$class = $this->fetchModeDefinition;
-						$arguments = $this->fetchModeArguments;
+						$class = "stdClass";
+						$arguments = array();
 					}
 				}
 				
