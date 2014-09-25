@@ -552,7 +552,12 @@ class LikePDOStatement
 		}
 		
 		if(!$fetch_style)
-			$fetch_style = $this->pdo->options[LikePDO::ATTR_DEFAULT_FETCH_MODE];
+		{
+			if($this->fetchMode)
+				$fetch_style = $this->fetchMode;
+			else
+				$fetch_style = $this->pdo->options[LikePDO::ATTR_DEFAULT_FETCH_MODE];
+		}
 
 		$columns = array();
 		$fetch = NULL;
@@ -826,7 +831,12 @@ class LikePDOStatement
 		}
 		
 		if(!$fetch_style)
-			$fetch_style = $this->pdo->options[LikePDO::ATTR_DEFAULT_FETCH_MODE];
+		{
+			if($this->fetchMode)
+				$fetch_style = $this->fetchMode;
+			else
+				$fetch_style = $this->pdo->options[LikePDO::ATTR_DEFAULT_FETCH_MODE];
+		}
 
 		$columns = array();
 			
@@ -917,23 +927,25 @@ class LikePDOStatement
 				}
 				else
 				{
-					if($this->fetchModeDefinition)
+					if($this->fetchMode != LikePDO::FETCH_CLASS)
 					{
-						if(!class_exists($this->fetchModeDefinition))
-						{
-							throw new LikePDOException("No fetch class specified");
-							return false;
-						}
-						else
-						{
-							$class = $this->fetchModeDefinition;
-							$arguments = $this->fetchModeArguments;
-						}
+						throw new LikePDOException("No fetch class specified");
+						return false;
+					}
+					elseif(!$this->fetchModeDefinition)
+					{
+						throw new LikePDOException("No fetch class specified");
+						return false;
+					}
+					elseif(!class_exists($this->fetchModeDefinition))
+					{
+						throw new LikePDOException("No fetch class specified");
+						return false;
 					}
 					else
 					{
-						$class = "stdClass";
-						$arguments = array();
+						$class = $this->fetchModeDefinition;
+						$arguments = $this->fetchModeArguments;
 					}
 				}
 				

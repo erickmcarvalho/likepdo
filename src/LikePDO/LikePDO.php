@@ -154,6 +154,7 @@ class LikePDO implements LikePDOInterface
 		{
 			case "mssql" :
 				$this->driver = new MssqlDriver($this->dsn, $username, $password, $options);
+				$this->supportTransaction = true;
 			break;
 		}
 	}
@@ -328,13 +329,16 @@ class LikePDO implements LikePDOInterface
 	 * Executes an SQL statement, returning a result set as a LikePDOStatement object
 	 * 
 	 * @param	string	$statement - The SQL statement to prepare and execute.
-	 * @param	integer	$fetch_type - LikePDO::FETCH_COLUMN / LikePDO::FETCH_COLUMN / LikePDO::FETCH_INTO [default -> NULL]
+	 * @param	integer	$fetch_type - LikePDO::FETCH_COLUMN / LikePDO::FETCH_CLASS / LikePDO::FETCH_INTO [default -> NULL]
 	 * @param	mixed	$fetch_arga - [int $colno] / [string $classname] / [object $object]
 	 * @param	mixed	$fetch_argb - [array $ctorargs]
 	*/
 	public function query($statement, $fetch_type = NULL, $fetch_arga = NULL, $fetch_argb = NULL)
 	{
-		$statement = new LikePDO($statement, $this);
+		if(!$fetch_type)
+			$fetch_type = LikePDO::FETCH_ASSOC;
+
+		$statement = new LikePDOStatement($statement, $this);
 		$statement->setFetchMode($fetch_type, $fetch_arga, $fetch_argb);
 		$statement->execute();
 		
