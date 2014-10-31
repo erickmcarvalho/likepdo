@@ -239,8 +239,7 @@ class MssqlDriver implements DriverInterface
 	{
 		if(!is_resource($statement))
 		{
-			throw new LikePDOException("There is no active statement");
-			return false;
+			return 0;
 		}
 		else
 		{
